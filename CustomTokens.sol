@@ -7,9 +7,9 @@ import './EnjinReceivingContract.sol';
 /**
  * @title Enjin Coin Custom Tokens (Mint) Contract
  * @dev Handles minting of custom game tokens
- * @todo DRAFT / Work in progress, monolithic design version
- * @todo Economy of scale curve needs re-do because of solidity math limitations
- * @todo Unit Tests
+ * todo DRAFT / Work in progress, monolithic design version
+ * todo Economy of scale curve needs re-do because of solidity math limitations
+ * todo Unit Tests
  */
 contract CustomTokens {
     using SafeMath for uint256;
@@ -56,7 +56,7 @@ contract CustomTokens {
     /**
      * @dev Get the balance of anyone's token
      * @param _customTokenId The ID number of the Custom Token
-     * @return The human-readable Custom Token name string
+     * @return The _owner's token balance of the type requested
      */
     function balanceOf(uint256 _customTokenId, address _owner) constant returns (uint256) {
         return types[_customTokenId].balances[_owner];
@@ -103,7 +103,7 @@ contract CustomTokens {
         types[_customTokenId].balances[msg.sender] = types[_customTokenId].balances[msg.sender].sub(_value);
         types[_customTokenId].balances[_to] = types[_customTokenId].balances[_to].add(_value);
 
-        bytes memory empty; // @todo: see if we can just pass "" instead of this variable
+        bytes memory empty; // todo: see if we can just pass "" instead of this variable
         if(codeLength>0) {
             EnjinReceivingContract receiver = EnjinReceivingContract(_to);
             receiver.tokenFallback(msg.sender, _value, empty);
@@ -125,21 +125,22 @@ contract CustomTokens {
 
     /**
      * @dev Create and mint a new Custom Token type, committing ENJ to the reserve and receiving the newly minted tokens
-     * @param _totalSupply
+     * @param _totalSupply The total supply of Custom Tokens that will be created
      * @param _exchangeRate How many ENJ each unit is worth (using multiplier 10000)
-     * @param _decimals
-     * @param _name
-     * @param _icon
-     * @param _data
-     * @return index Custom Token ID
+     * @param _decimals Number of Decimal places (0 for indivisible items)
+     * @param _name Human name of the item, ex. Sword of Satoshi
+     * @param _icon URL to the 500x500px icon representing the item
+     * @param _customData Optional data string to store custom game attributes in an item
+     * @return index
      */
-    function createToken(uint256 _totalSupply, uint256 _exchangeRate, uint8 _decimals, string _name, string _icon, string _data) {
+    function createToken(uint256 _totalSupply, uint256 _exchangeRate, uint8 _decimals, string _name, string _icon, string _customData)
+    returns (uint256) {
         require(_totalSupply > 0);
 
         // Economy-of-scale calculation forcing the minimum exchange rate to start at 1 ENJ : 1 Custom Token and then decrease w/ exponential decay
         // Check for <1 because of possible 0 with integer math - this results in the lowest exchange rate of 1 (w/multiplier) after 100,000,000 units
-        // @todo: Rewrite this with 100M/x for solidity int math and match the curve
-        require(_exchangeRate >= (_totalSupply ** (-5 / 10)) * multiplier && _exchangeRate > 0);
+        // todo: Rewrite this with 100M/x for solidity int math and match the curve
+        //require(_exchangeRate >= (_totalSupply ** (-5 / 10)) * multiplier && _exchangeRate > 0);
 
         // Check ENJ allowance that Mint may take from creator
         uint256 totalCost = _exchangeRate / multiplier * _totalSupply;
@@ -158,7 +159,7 @@ contract CustomTokens {
             _decimals,
             _name,
             _icon,
-            _data
+            _customData
         );
 
         // Grant tokens to creator
@@ -176,11 +177,11 @@ contract CustomTokens {
      * @param _value How many tokens to liquidate
      */
     function liquidateToken(uint256 _customTokenId, uint256 _value) {
-        // @todo: We may want another function signature that liquidates and transfers to a specific address instead of original sender
+        // todo: We may want another function signature that liquidates and transfers to a specific address instead of original sender
         require(types[_customTokenId].balances[msg.sender] >= _value);
 
         transferInternal(_customTokenId, msg.sender, this, _value);
-        enjinCoin.transferFrom(this, msg.sender, types[_customTokenId].exchangeRate / multiplier * _value); // @todo: check this calculation carefully
+        enjinCoin.transferFrom(this, msg.sender, types[_customTokenId].exchangeRate / multiplier * _value); // todo: check this calculation carefully
         Liquidate(_customTokenId, msg.sender, _value);
     }
 
@@ -227,18 +228,18 @@ contract CustomTokens {
     /**
      * @dev Delete a custom token type. There must be 0 in circulation and this must be run by the token creator.
      * @param _customTokenId The ID number of the Custom Token
-     * @param _name
-     * @param _icon
-     * @param _data
+     * @param _name Human name of the item, ex. Sword of Satoshi
+     * @param _icon URL to the 500x500px icon representing the item
+     * @param _customData Optional data string to store custom game attributes in an item
      */
-    function updateParams(uint256 _customTokenId, string _name, string _icon, string _data) {
+    function updateParams(uint256 _customTokenId, string _name, string _icon, string _customData) {
         checkTokenCreator(_customTokenId);
 
         types[_customTokenId].name = _name;
         types[_customTokenId].icon = _icon;
-        types[_customTokenId].data = _data;
+        types[_customTokenId].data = _customData;
 
-        Update(_customTokenId, _name, _icon, _data);
+        Update(_customTokenId, _name, _icon, _customData);
     }
 
     /**
@@ -276,7 +277,7 @@ contract CustomTokens {
     event Liquidate(uint256 indexed _customTokenId, address indexed _owner, uint256 _value);
     event Mint(uint256 indexed _customTokenId, uint256 _value);
     event Delete(uint256 indexed _customTokenId, address indexed _creator);
-    event Update(uint256 indexed _customTokenId, string _name, string _icon, string _data);
+    event Update(uint256 indexed _customTokenId, string _name, string _icon, string _customData);
     event Transfer(uint256 indexed _customTokenId, address indexed _from, address indexed _to, uint256 _value, bytes _data);
     event Assign(uint256 indexed _customTokenId, address indexed _from, address indexed _to);
 }
