@@ -119,6 +119,8 @@ contract CustomTokens {
      * @param _value Number of tokens to send (omitting decimals)
      */
     function transferInternal(uint256 _customTokenId, address _from, address _to, uint256 _value) private {
+        require(_to != address(0));
+
         types[_customTokenId].balances[_from] = types[_customTokenId].balances[_from].sub(_value);
         types[_customTokenId].balances[_to] = types[_customTokenId].balances[_to].add(_value);
     }
